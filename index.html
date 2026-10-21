@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Weather Widget</title>
+<link rel="stylesheet" href="style.css">
+<!-- DynaPuff (used by the "Bubble" font option) isn't a system font, so it's
+     loaded from Google Fonts. If this can't be reached, the Bubble option
+     just falls back to a plain sans-serif — everything else works offline. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DynaPuff:wght@700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <div class="weather-widget scheme-default font-default" id="weatherWidget">
+
+    <!-- Live "sky strip" — a thin data-driven gradient bezel across the top.
+         Its color reflects the current location's actual sky (day/night + condition). -->
+    <div class="sky-strip" id="skyStrip" aria-hidden="true"></div>
+
+    <!-- Customization menu — its own bar, persistent across both screens,
+         so it can never overlap the unit toggle or other header content. -->
+    <div class="menu-bar">
+      <button type="button" class="icon-btn settings-btn" id="settingsBtn"
+        title="Customize appearance" aria-label="Customize appearance" aria-expanded="false" aria-controls="settingsPanel">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <g stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+            <line x1="4" y1="7" x2="20" y2="7"/>
+            <line x1="4" y1="12" x2="20" y2="12"/>
+            <line x1="4" y1="17" x2="20" y2="17"/>
+          </g>
+          <circle cx="9" cy="7" r="2" fill="var(--bg)" stroke="currentColor" stroke-width="1.8"/>
+          <circle cx="15" cy="12" r="2" fill="var(--bg)" stroke="currentColor" stroke-width="1.8"/>
+          <circle cx="7" cy="17" r="2" fill="var(--bg)" stroke="currentColor" stroke-width="1.8"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="settings-panel" id="settingsPanel" role="dialog" aria-label="Customize appearance" hidden>
+      <div class="settings-section">
+        <p class="settings-label">Temperature unit</p>
+        <div class="option-row" id="menuUnitRow">
+          <button type="button" class="option-btn is-active" id="menuUnitC" aria-pressed="true">°C</button>
+          <button type="button" class="option-btn" id="menuUnitF" aria-pressed="false">°F</button>
+        </div>
+      </div>
+      <div class="settings-section">
+        <p class="settings-label">Color scheme</p>
+        <div class="swatch-row" id="schemeRow"></div>
+      </div>
+      <div class="settings-section">
+        <p class="settings-label">Font</p>
+        <div class="option-row" id="fontRow"></div>
+      </div>
+      <div class="settings-section">
+        <p class="settings-label">Icon style</p>
+        <div class="option-row" id="styleRow"></div>
+      </div>
+      <div class="settings-section settings-toggle-row">
+        <p class="settings-label">Invert colors</p>
+        <button type="button" class="switch" id="invertToggle" role="switch" aria-checked="false" aria-label="Invert background and text colors">
+          <span class="switch-knob"></span>
+        </button>
+      </div>
+    </div>
+
+    <!-- SCREEN 1: blank rectangle with location search -->
+    <section class="screen search-screen" id="searchScreen">
+      <div class="search-shell">
+        <p class="search-eyebrow">Weather</p>
+        <div class="search-box">
+          <svg class="search-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/>
+            <line x1="15.3" y1="15.3" x2="21" y2="21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          <input
+            type="text"
+            id="locationInput"
+            class="search-input"
+            placeholder="Search for a city…"
+            autocomplete="off"
+            spellcheck="false"
+            role="combobox"
+            aria-expanded="false"
+            aria-controls="suggestionsList"
+            aria-autocomplete="list"
+          >
+        </div>
+        <ul class="suggestions-list" id="suggestionsList" role="listbox" hidden></ul>
+        <p class="search-status" id="searchStatus" aria-live="polite"></p>
+      </div>
+    </section>
+
+    <!-- SCREEN 2: weather display for the selected location -->
+    <section class="screen weather-screen" id="weatherScreen" hidden>
+
+      <header class="widget-header">
+        <button type="button" class="icon-btn" id="changeLocationBtn" title="Change location" aria-label="Change location">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/>
+            <line x1="15.3" y1="15.3" x2="21" y2="21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </button>
+
+        <div class="location-block">
+          <p class="location-name" id="locationName">—</p>
+          <p class="location-sub" id="locationSub"></p>
+        </div>
+
+        <div class="unit-toggle" role="group" aria-label="Temperature unit">
+          <button type="button" class="unit-btn is-active" id="unitC" aria-pressed="true">°C</button>
+          <button type="button" class="unit-btn" id="unitF" aria-pressed="false">°F</button>
+        </div>
+      </header>
+
+      <div class="current-weather">
+        <div class="current-icon" id="currentIcon"></div>
+        <div class="current-readout">
+          <p class="current-temp">
+            <span id="currentTemp">—</span>
+            <span class="temp-flag" id="tempFlag" role="img" hidden></span>
+          </p>
+          <p class="current-desc" id="currentDesc">—</p>
+        </div>
+      </div>
+
+      <div class="hourly-band" id="hourlyBand" tabindex="0" aria-label="Hourly forecast, scrollable"></div>
+
+      <div class="daily-table-wrap">
+        <table class="daily-table" id="dailyTable">
+          <caption class="visually-hidden">10-day forecast</caption>
+          <tbody id="dailyTableBody"></tbody>
+        </table>
+      </div>
+
+      <footer class="widget-footer">
+        <p class="last-updated" id="lastUpdated"></p>
+      </footer>
+
+      <div class="error-banner" id="errorBanner" hidden></div>
+    </section>
+
+  </div>
+
+<!-- Your icons, packed by build-icons.py (optional: the widget reads the "icon"
+     folder directly when served over http; this file lets it work from disk too). -->
+<script src="icons-data.js"></script>
+<script src="script.js"></script>
+</body>
+</html>
