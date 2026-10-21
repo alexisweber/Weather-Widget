@@ -1,0 +1,794 @@
+/* =========================================================================
+   Weather Widget — stylesheet
+   Design concept: a small instrument-panel card. A thin "sky strip" bezel
+   along the top is the one live, data-driven accent — its color reflects
+   the selected location's actual sky (day/night + condition). Everything
+   else stays quiet and disciplined around it.
+   ========================================================================= */
+
+:root {
+  /* --- Sky strip default (neutral, before any condition is known) --- */
+  --sky-a: #CBD6DD;
+  --sky-b: #EAE0C8;
+
+  /* --- Sizing --- */
+  --radius-card: 16px;
+  --radius-el: 10px;
+  --radius-pill: 999px;
+
+  /* Errors stay a recognizable red-ish tone regardless of chosen scheme. */
+  --danger: #C64B5D;
+}
+
+/* -------------------------------------------------------------------- */
+/* Color schemes                                                        */
+/* Each scheme sets two "poles" (a background and a foreground) plus an */
+/* accent. The .inverted modifier swaps which pole is background vs     */
+/* foreground — that's the whole light/dark toggle. Every other color   */
+/* (soft text, faint text, dividers, raised surfaces) is computed from  */
+/* --bg/--fg with color-mix(), so it automatically stays correct after  */
+/* a swap or a scheme change, with no separate values to keep in sync.  */
+/* -------------------------------------------------------------------- */
+
+.weather-widget.scheme-default {
+  --scheme-bg: #16263F;      /* dark blue */
+  --scheme-fg: #FFFFFF;      /* white (gray emerges via the soft/faint blends) */
+  --scheme-accent: #F0B62E;  /* yellow */
+  --scheme-accent-on: #16263F;
+}
+
+.weather-widget.scheme-autumn {
+  --scheme-bg: #A0522D;
+  --scheme-fg: #F5F5DC;
+  --scheme-accent: #F4A460;
+  --scheme-accent-on: #4A2A16;
+}
+
+.weather-widget.scheme-spring {
+  --scheme-bg: #6E7B3A;      /* olive green */
+  --scheme-fg: #F5E9B8;      /* light golden haze */
+  --scheme-accent: #AEC16C;  /* pale blue sky */
+  --scheme-accent-on: #223018;
+}
+
+.weather-widget.scheme-winter {
+  --scheme-bg: #052542;
+  --scheme-fg: #E0ECF2;
+  --scheme-accent: #6493C9;
+  --scheme-accent-on: #052542;
+}
+
+.weather-widget.scheme-summer {
+  --scheme-bg: #D3A5B8;      /* "dark" background (invert off) */
+  --scheme-fg: #FFFFE6;      /* font color in both modes */
+  --scheme-accent: #F1DAE4;
+  --scheme-accent-on: #6B1F3A;
+  /* Summer doesn't simply swap bg/fg when inverted — it has its own
+     "light" background and keeps the same font color. */
+ /* --scheme-inv-bg: #F9A96F; */  /* "light" background (invert on) */
+ /* --scheme-inv-fg: #FFFFE6; */
+ }
+
+.weather-widget {
+  --bg: var(--scheme-bg);
+  --fg: var(--scheme-fg);
+  --accent: var(--scheme-accent);
+  --accent-on: var(--scheme-accent-on);
+}
+
+.weather-widget.inverted {
+  --bg: var(--scheme-inv-bg, var(--scheme-fg));
+  --fg: var(--scheme-inv-fg, var(--scheme-bg));
+}
+
+.weather-widget {
+  --fg-soft:  color-mix(in srgb, var(--fg) 68%, var(--bg) 32%);
+  --fg-faint: color-mix(in srgb, var(--fg) 42%, var(--bg) 58%);
+  --line:     color-mix(in srgb, var(--fg) 18%, var(--bg) 82%);
+  --raised:   color-mix(in srgb, var(--fg) 9%,  var(--bg) 91%);
+}
+
+/* --------------------------------------------------------------------- */
+/* Reset + base                                                          */
+/* --------------------------------------------------------------------- */
+
+.weather-widget, .weather-widget * {
+  box-sizing: border-box;
+}
+
+.weather-widget {
+  font-family: Arial, Helvetica, sans-serif; /* ultimate fallback */
+  color: var(--fg);
+  background: var(--bg);
+  width: 100%;
+  height: 100%;
+  min-width: 220px;
+  min-height: 180px;
+  border-radius: var(--radius-card);
+  border: 1px solid var(--line);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.06);
+  font-size: 16px; /* base — scaled down by .compact / .tiny below */
+}
+
+/* --------------------------------------------------------------------- */
+/* Font options                                                          */
+/* Distinctive faces are listed first in each stack (browsers use the    */
+/* first available font), with generic fallbacks at the end so text      */
+/* always stays legible even where a face isn't installed.               */
+/* --------------------------------------------------------------------- */
+
+.weather-widget.font-default {
+  font-family: Arial, Helvetica, sans-serif;
+}
+.weather-widget.font-serif {
+  font-family: Baskerville, "Hoefler Text", Georgia, "Times New Roman", serif;
+}
+.weather-widget.font-modern {
+  font-family: Futura, "Century Gothic", "Trebuchet MS", sans-serif;
+}
+.weather-widget.font-bubble {
+  font-family: DynaPuff, "Arial Rounded MT Bold", Arial, sans-serif;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px; height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  background: none;
+  border: none;
+  color: inherit;
+}
+
+button:focus-visible,
+input:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* --------------------------------------------------------------------- */
+/* Sky strip — the signature element                                     */
+/* --------------------------------------------------------------------- */
+
+.sky-strip {
+  height: 6px;
+  width: 100%;
+  flex: 0 0 auto;
+  background: linear-gradient(90deg, var(--sky-a), var(--sky-b));
+  background-size: 200% 100%;
+  animation: sky-drift 14s ease-in-out infinite;
+}
+
+@keyframes sky-drift {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sky-strip { animation: none; }
+}
+
+/* Condition-driven sky palettes, set as classes by script.js */
+.sky-strip.sky-clear-day     { --sky-a: #6FA8DC; --sky-b: #F4CB6A; }
+.sky-strip.sky-clear-night   { --sky-a: #131A33; --sky-b: #3C4A78; }
+.sky-strip.sky-cloudy-day    { --sky-a: #9FB0BA; --sky-b: #D9E0E3; }
+.sky-strip.sky-cloudy-night  { --sky-a: #1E2430; --sky-b: #3A4351; }
+.sky-strip.sky-rain          { --sky-a: #4E6B78; --sky-b: #7C9AA6; }
+.sky-strip.sky-thunderstorm  { --sky-a: #3B2A44; --sky-b: #7A4A63; }
+.sky-strip.sky-snow          { --sky-a: #AFC2D6; --sky-b: #F0F4F8; }
+.sky-strip.sky-hail          { --sky-a: #5A6B7A; --sky-b: #AEB9C4; }
+.sky-strip.sky-fog           { --sky-a: #B7BCB9; --sky-b: #DCDEDA; }
+.sky-strip.sky-wind          { --sky-a: #7FA6A0; --sky-b: #CFE0D6; }
+
+/* --------------------------------------------------------------------- */
+/* Screens                                                                */
+/* --------------------------------------------------------------------- */
+
+.screen {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* A class-level `display` declaration on an element normally beats the
+   browser's own [hidden]{display:none} rule (author styles outrank the
+   user-agent stylesheet regardless of specificity). Without this, toggling
+   the `hidden` attribute in script.js would silently do nothing. */
+.screen[hidden] {
+  display: none;
+}
+
+/* ---- Search screen ---- */
+
+.search-screen {
+  align-items: center;
+  justify-content: center;
+  padding: 1.5em;
+}
+
+.search-shell {
+  width: 100%;
+  max-width: 22em;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6em;
+}
+
+.search-eyebrow {
+  margin: 0 0 0.2em;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--fg-faint);
+  text-align: center;
+}
+
+.search-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: var(--raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  padding: 0.55em 0.9em;
+  gap: 0.5em;
+}
+
+.search-icon {
+  width: 1.1em;
+  height: 1.1em;
+  flex: 0 0 auto;
+  color: var(--fg-faint);
+}
+
+.search-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  color: var(--fg);
+  font-family: inherit;
+  font-size: 0.95rem;
+  outline: none;
+}
+
+.search-input::placeholder {
+  color: var(--fg-faint);
+}
+
+.suggestions-list {
+  list-style: none;
+  margin: 0;
+  padding: 0.25em;
+  background: var(--raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-el);
+  max-height: 12em;
+  overflow-y: auto;
+}
+
+.suggestion-item {
+  padding: 0.5em 0.6em;
+  border-radius: calc(var(--radius-el) - 4px);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1em;
+}
+
+.suggestion-item:hover,
+.suggestion-item.is-highlighted {
+  background: var(--bg);
+}
+
+.suggestion-name {
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.suggestion-region {
+  font-size: 0.75rem;
+  color: var(--fg-soft);
+}
+
+.search-status {
+  margin: 0;
+  min-height: 1.2em;
+  font-size: 0.75rem;
+  color: var(--fg-faint);
+  text-align: center;
+}
+
+/* ---- Weather screen ---- */
+
+.weather-screen {
+  padding: 0.9em 1em 0.7em;
+  gap: 0.7em;
+}
+
+.widget-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6em;
+  flex: 0 0 auto;
+}
+
+.icon-btn {
+  flex: 0 0 auto;
+  width: 1.9em;
+  height: 1.9em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-pill);
+  color: var(--fg-soft);
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.icon-btn:hover {
+  background: var(--raised);
+  color: var(--fg);
+}
+
+.icon-btn svg {
+  width: 1.05em;
+  height: 1.05em;
+}
+
+.location-block {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.location-name {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.location-sub {
+  margin: 0.1em 0 0;
+  font-size: 0.6875rem;
+  color: var(--fg-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.unit-toggle {
+  flex: 0 0 auto;
+  display: flex;
+  background: var(--raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  padding: 0.15em;
+  gap: 0.15em;
+}
+
+.unit-btn {
+  padding: 0.25em 0.6em;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border-radius: var(--radius-pill);
+  color: var(--fg-faint);
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.unit-btn.is-active {
+  background: var(--accent);
+  color: var(--accent-on);
+}
+
+/* ---- Current readout ---- */
+
+.current-weather {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 0.7em;
+}
+
+.current-icon {
+  width: 3.2em;
+  height: 3.2em;
+  flex: 0 0 auto;
+}
+
+.current-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.current-readout {
+  min-width: 0;
+}
+
+.current-temp {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.14em;
+  font-size: 2.75rem;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+/* Hot / cold marker beside the current temperature. Sized in em so it
+   follows the temperature's own size at every widget size. */
+.temp-flag {
+  display: inline-flex;
+  flex: 0 0 auto;
+  width: 0.72em;
+  height: 0.72em;
+}
+.temp-flag svg { width: 100%; height: 100%; }
+/* (an explicit display above would otherwise defeat the hidden attribute) */
+.temp-flag[hidden] { display: none; }
+
+.current-desc {
+  margin: 0.2em 0 0;
+  font-size: 0.8125rem;
+  color: var(--fg-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* ---- Hourly scrolling band ---- */
+
+.hourly-band {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 1.1em;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.6em 0.2em;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  scrollbar-width: thin;
+}
+
+.hourly-band::-webkit-scrollbar {
+  height: 6px;
+}
+.hourly-band::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border-radius: var(--radius-pill);
+}
+
+.hour-item {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35em;
+  min-width: 2.6em;
+}
+
+.hour-item.is-now .hour-time {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.hour-item.is-event .hour-temp {
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--fg-soft);
+}
+
+.hour-time {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--fg-faint);
+}
+
+.hour-icon {
+  width: 1.6em;
+  height: 1.6em;
+}
+.hour-icon svg { width: 100%; height: 100%; }
+
+.hour-temp {
+  font-size: 0.875rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- 10-day table ---- */
+
+.daily-table-wrap {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.daily-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.daily-table tr {
+  border-bottom: 1px solid var(--line);
+}
+.daily-table tr:last-child {
+  border-bottom: none;
+}
+
+.daily-table td {
+  padding: 0.5em 0.3em;
+  font-size: 0.8125rem;
+  vertical-align: middle;
+}
+
+.day-name {
+  font-weight: 700;
+  width: 3.4em;
+  white-space: nowrap;
+}
+
+.day-icon-cell {
+  width: 1.8em;
+}
+
+.day-icon {
+  width: 1.35em;
+  height: 1.35em;
+}
+.day-icon svg { width: 100%; height: 100%; }
+
+.day-range {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.day-min {
+  color: var(--fg-faint);
+}
+
+.day-max {
+  color: var(--fg);
+  font-weight: 700;
+  margin-left: 0.4em;
+}
+
+.day-bar-cell {
+  padding-left: 0.6em;
+  padding-right: 0.6em;
+}
+
+.day-bar-track {
+  position: relative;
+  height: 4px;
+  border-radius: var(--radius-pill);
+  background: var(--line);
+}
+
+.day-bar-fill {
+  position: absolute;
+  top: 0; bottom: 0;
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+}
+
+/* ---- Footer / errors ---- */
+
+.widget-footer {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.last-updated {
+  margin: 0;
+  font-size: 0.6875rem;
+  color: var(--fg-faint);
+}
+
+.error-banner {
+  flex: 0 0 auto;
+  font-size: 0.75rem;
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+  border-radius: var(--radius-el);
+  padding: 0.5em 0.7em;
+}
+
+/* --------------------------------------------------------------------- */
+/* Size-adjustable behavior                                              */
+/* The widget observes its own box size (via ResizeObserver in script.js)
+   and toggles these classes — so it adapts to the container it's
+   embedded in (a resized Notion embed block) rather than the viewport. */
+/* --------------------------------------------------------------------- */
+
+.weather-widget.compact {
+  font-size: 14px;
+}
+.weather-widget.compact .current-temp { font-size: 2.1rem; }
+.weather-widget.compact .current-icon { width: 2.5em; height: 2.5em; }
+.weather-widget.compact .weather-screen { padding: 0.7em 0.8em 0.55em; gap: 0.55em; }
+
+.weather-widget.tiny {
+  font-size: 12px;
+}
+.weather-widget.tiny .location-sub { display: none; }
+.weather-widget.tiny .current-desc { display: none; }
+.weather-widget.tiny .current-temp { font-size: 1.65rem; }
+.weather-widget.tiny .current-icon { width: 2em; height: 2em; }
+.weather-widget.tiny .search-eyebrow { display: none; }
+.weather-widget.tiny .hourly-band { gap: 0.7em; }
+.weather-widget.tiny .weather-screen { padding: 0.55em 0.65em 0.5em; gap: 0.45em; }
+
+/* --------------------------------------------------------------------- */
+/* Customization menu                                                    */
+/* A persistent button pinned to the top-right corner (sitting above     */
+/* both screens) opens a small popover with the color scheme, font,      */
+/* icon style, and invert controls. Everything here reads the same       */
+/* --bg/--fg/--accent tokens, so the panel itself always themes          */
+/* correctly no matter what's selected.                                  */
+/* --------------------------------------------------------------------- */
+
+.menu-bar {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: flex-end;
+  padding: 8px 10px 0;
+}
+
+.settings-panel {
+  position: absolute;
+  top: 44px;
+  right: 10px;
+  z-index: 10;
+  width: 15.5em;
+  max-width: calc(100% - 20px);
+  max-height: calc(100% - 60px);
+  overflow-y: auto;
+  background: var(--raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-el);
+  padding: 0.8em;
+  box-shadow: 0 10px 28px rgba(0,0,0,0.22);
+  display: flex;
+  flex-direction: column;
+  gap: 0.85em;
+}
+
+/* Same issue as .screen above — this is what actually makes the panel
+   close. The earlier click-handler changes were correct but couldn't fix
+   this, since the panel was never being hidden visually in the first place. */
+.settings-panel[hidden] {
+  display: none;
+}
+
+.settings-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45em;
+}
+
+.settings-label {
+  margin: 0;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--fg-faint);
+}
+
+/* ---- Color scheme swatches ---- */
+
+.swatch-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55em;
+}
+
+.swatch-btn {
+  width: 2em;
+  height: 2em;
+  border-radius: 50%;
+  border: 2px solid; /* color set inline per scheme = that scheme's accent */
+  flex: 0 0 auto;
+  transition: box-shadow 0.15s ease;
+}
+
+.swatch-btn.is-active {
+  box-shadow: 0 0 0 2px var(--raised), 0 0 0 4px var(--fg);
+}
+
+/* ---- Font / icon-style option pills ---- */
+
+.option-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4em;
+}
+
+.option-btn {
+  padding: 0.35em 0.65em;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--line);
+  font-size: 0.8125rem;
+  color: var(--fg-soft);
+  display: flex;
+  align-items: center;
+  gap: 0.35em;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.option-btn.is-active {
+  background: var(--accent);
+  color: var(--accent-on);
+  border-color: transparent;
+  /* icons inside this pill use these instead of the normal icon colors */
+  --icon-primary: var(--accent-on);
+  --icon-secondary: var(--accent-on);
+  --icon-faint: var(--accent-on);
+  --icon-cutout: var(--accent);
+}
+
+.option-btn .opt-icon {
+  width: 1.1em;
+  height: 1.1em;
+  flex: 0 0 auto;
+}
+.option-btn .opt-icon svg { width: 100%; height: 100%; }
+
+/* ---- Invert switch ---- */
+
+.settings-toggle-row {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.switch {
+  width: 2.4em;
+  height: 1.3em;
+  border-radius: var(--radius-pill);
+  background: var(--line);
+  position: relative;
+  flex: 0 0 auto;
+  transition: background 0.15s ease;
+}
+
+.switch.is-on {
+  background: var(--accent);
+}
+
+.switch-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: calc(1.3em - 4px);
+  height: calc(1.3em - 4px);
+  border-radius: 50%;
+  background: var(--raised);
+  transition: transform 0.15s ease;
+}
+
+.switch.is-on .switch-knob {
+  transform: translateX(1.1em);
+}
